@@ -8,6 +8,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.datetime.Clock
 import kotlin.random.Random
 
 class GameController(
@@ -48,6 +49,9 @@ class GameController(
                             delay(1000)
 
                             while(!GameState.gameOver) {
+
+                                val start = Clock.System.now().toEpochMilliseconds()
+
                                 performTick(
                                     interpolation = interpolation
                                 )
@@ -57,7 +61,11 @@ class GameController(
                                     GameState.toGameData(this@GameController)
                                 )
 
-                                tickDelay()
+                                val end = Clock.System.now().toEpochMilliseconds()
+
+                                tickDelay(
+                                    subractMillis = end - start
+                                )
                             }
                             playState.emit(PlayState.End)
                         }
@@ -108,15 +116,15 @@ class GameController(
             }
         )
 
-        if (bird.y <= 0f) {
-            GameState.gameOver = true
-        }
-
-        pipes.firstOrNull()?.takeIf { it.x < bird.x + 100f }?.let {
+        pipes.firstOrNull()?.takeIf { it.x <= bird.x + 100f && it.x + it.width >= bird.x }?.let {
             val topRange = (0f..(screenHeight - it.height - it.spacing))
             val bottomRange = (screenHeight - it.height)..((screenHeight - it.height) + it.height)
             if (bird.y in topRange || bird.y in bottomRange || bird.y + 100f in topRange || bird.y + 100f in bottomRange)
                 GameState.gameOver = true
+        }
+
+        if (bird.y >= screenHeight.toFloat()) {
+            GameState.gameOver = true
         }
     }
 

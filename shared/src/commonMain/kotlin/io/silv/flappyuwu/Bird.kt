@@ -20,7 +20,9 @@ class Bird(
     override fun onTick(interp: Float) {
         val gravityApplied = (y + (gravity * interp))
         val jumpVelocityApplied = (gravityApplied + (jumpHeight * velocity * interp))
-        y = (jumpVelocityApplied).coerceIn(0f, gameController.screenHeight.toFloat() - 100f)
+
+        y = (jumpVelocityApplied).coerceAtLeast(0f)
+
         velocity -= (.1f * interp).coerceAtLeast(0f)
     }
 
