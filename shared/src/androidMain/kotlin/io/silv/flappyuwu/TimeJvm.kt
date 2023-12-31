@@ -1,0 +1,1 @@
+actual fun nanoTime(): Long = System.nanoTime()

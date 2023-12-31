@@ -1,14 +1,16 @@
 package io.silv.flappyuwu
 
-import kotlinx.coroutines.delay
+import TickerMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.datetime.Clock
+import ticker
 import kotlin.random.Random
 
 class GameController(
@@ -35,8 +37,8 @@ class GameController(
        // mutableGameData.onEach { Logger.d { it.toString() } }.launchIn(applicationScope)
 
         applicationScope.launch {
-            playState.collectLatest {
-                    when (it) {
+            playState.collectLatest { state ->
+                when (state) {
                         PlayState.End -> {
                             playState.emit(PlayState.Idle)
                             GameState.reset()
@@ -46,28 +48,33 @@ class GameController(
 
                             val interpolation = 60f / TICK_RATE
 
-                            delay(1000)
+                            val tickProducer = ticker(
+                                delayMillis = (1000L / TICK_RATE),
+                                initialDelayMillis = 1000,
+                                mode = TickerMode.FIXED_PERIOD
+                            )
 
-                            while(!GameState.gameOver) {
 
-                                val start = Clock.System.now().toEpochMilliseconds()
+                            tickProducer.receiveAsFlow()
+                                .catch {
+                                    playState.emit(PlayState.End)
+                                }
+                                .collect { tick ->
+                                    performTick(
+                                        interpolation = interpolation
+                                    )
+                                        .also { GameState.tick++ }
 
-                                performTick(
-                                    interpolation = interpolation
-                                )
-                                    .also { GameState.tick++ }
+                                    mutableGameData.emit(
+                                        GameState.toGameData(this@GameController)
+                                    )
 
-                                mutableGameData.emit(
-                                    GameState.toGameData(this@GameController)
-                                )
+                                    if (GameState.gameOver) {
+                                        tickProducer.cancel()
+                                        playState.emit(PlayState.End)
+                                    }
+                                }
 
-                                val end = Clock.System.now().toEpochMilliseconds()
-
-                                tickDelay(
-                                    subractMillis = end - start
-                                )
-                            }
-                            playState.emit(PlayState.End)
                         }
                         else -> Unit
                     }

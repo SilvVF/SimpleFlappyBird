@@ -7,17 +7,23 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -27,6 +33,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastForEach
 import io.silv.flappyuwu.GameController
 import io.silv.flappyuwu.GameData
+import io.silv.flappyuwu.TICK_RATE
+import kotlin.math.roundToLong
 
 
 class MainActivity : ComponentActivity() {
@@ -74,13 +82,28 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         GameController.PlayState.Idle -> {
-                            Box(Modifier.fillMaxSize()) {
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                verticalArrangement = Arrangement.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
                                 Text("Play",
                                     Modifier
-                                        .align(Alignment.Center)
                                         .clickable {
                                             gameController.playState.tryEmit(GameController.PlayState.Playing)
-                                        })
+                                        }
+                                )
+                                var value by rememberSaveable { mutableFloatStateOf(TICK_RATE.toFloat()) }
+                                Text(text = "Tick rate $value")
+                                Slider(
+                                    valueRange = 30f..120f,
+                                    value = value,
+                                    onValueChange = {
+                                        value = it
+                                        TICK_RATE = it.roundToLong()
+                                    },
+                                    modifier = Modifier.padding(32.dp)
+                                )
                             }
                         }
                         GameController.PlayState.End -> {
